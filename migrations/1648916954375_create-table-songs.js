@@ -4,21 +4,34 @@ const { PgLiteral } = require('node-pg-migrate');
 
 exports.up = (pgm) => {
   pgm.createTable(
-    'album',
+    'songs',
     {
       id: {
-        type: 'uuid',
-        default: new PgLiteral('uuid_generate_v4()'),
-        notNull: true,
+        type: 'UUID',
         primaryKey: true,
+        notNull: true,
+        default: new PgLiteral('uuid_generate_v4()'),
       },
-      name: {
+      title: {
         type: 'TEXT',
         notNull: true,
       },
-      year: {
-        type: 'INTEGER',
+      genre: {
+        type: 'TEXT',
         notNull: true,
+      },
+      performer: {
+        type: 'TEXT',
+        notNull: true,
+      },
+      duration: {
+        type: 'INTEGER',
+        notNull: false,
+      },
+      albumId: {
+        type: 'UUID',
+        notNull: false,
+        references: 'albums',
       },
     },
     {
@@ -28,5 +41,5 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('album');
+  pgm.dropTable('songs');
 };
