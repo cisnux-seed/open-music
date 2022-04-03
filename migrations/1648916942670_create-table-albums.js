@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
-
 const { PgLiteral } = require('node-pg-migrate');
 
 exports.up = (pgm) => {
+  // add extension to generate uuidv4
   pgm.createExtension('uuid-ossp', { ifNotExists: true });
   pgm.createTable(
     'albums',
