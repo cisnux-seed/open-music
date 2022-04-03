@@ -1,8 +1,10 @@
 const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
+const mapDBToModel = require('../../utils');
 
 class OpenMusicService {
+  // private pool property
   #pool;
 
   constructor() {
@@ -11,7 +13,7 @@ class OpenMusicService {
 
   async addAlbum({ name, year }) {
     const query = {
-      text: 'INSERT INTO albums VALUES($1, $2) RETURNING id',
+      text: 'INSERT INTO albums(name, year) VALUES($1, $2) RETURNING id',
       values: [name, year],
     };
 
@@ -25,11 +27,28 @@ class OpenMusicService {
   }
 
   async getAlbumById(id) {
+    /*
+     *Expected result:
+     * album: {
+     * id: uui,
+     * name: 'album name',
+     * year: year,
+     * songs: [
+     *   {
+     *     id: 'uuid',
+     *     title: 'title song',
+     *     performer: 'performer'
+     *   }
+     * ]
+     * }
+    */
     const query = {
-      text: 'SELECT * FROM albums WHERE id = $1',
+      text: 'SELECT row_to_json(albums) AS album FROM(SELECT albums.id, albums.name, albums.year, (SELECT json_agg(songs) AS songs FROM(SELECT id, title, performer FROM songs WHERE songs.album_id = $1) songs) FROM albums) albums WHERE id=$1',
       values: [id],
     };
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Album not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Album not found');
@@ -40,11 +59,13 @@ class OpenMusicService {
 
   async editAlbumById(id, { name, year }) {
     const query = {
-      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $5 RETURNING id',
+      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
       values: [name, year, id],
     };
 
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Album failed to update, id not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Album failed to update, id not found');
@@ -56,7 +77,9 @@ class OpenMusicService {
       text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Album failed to delete, id not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Album failed to delete, id not found');
@@ -66,9 +89,12 @@ class OpenMusicService {
   async addSong({
     title, year, genre, performer, duration, albumId,
   }) {
-    const query = {
-      text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
-      values: [title, year, genre, performer, duration, albumId],
+    const query = albumId === undefined ? {
+      text: 'INSERT INTO songs(title, genre, year, performer, duration) VALUES($1, $2, $3, $4, $5) RETURNING id',
+      values: [title, genre, year, performer, duration],
+    } : {
+      text: 'INSERT INTO songs(title, genre, year, performer, duration, album_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
+      values: [title, genre, year, performer, duration, albumId],
     };
 
     const result = await this.#pool.query(query);
@@ -80,8 +106,36 @@ class OpenMusicService {
     return result.rows[0].id;
   }
 
+  async getSongsByKeywords({ title, performer }) {
+    let query = '';
+
+    if (title !== undefined && performer !== undefined) {
+      query = {
+        text: 'SELECT id, title, performer FROM songs WHERE LOWER(title) LIKE $1 AND LOWER(performer) LIKE $2',
+        values: [`%${title.toLowerCase()}%`, `%${performer.toLowerCase()}%`],
+      };
+    } else if (title !== undefined) {
+      query = {
+        text: 'SELECT id, title, performer FROM songs WHERE LOWER(title) LIKE $1',
+        values: [`%${title.toLowerCase()}%`],
+      };
+    } else if (performer !== undefined) {
+      query = {
+        text: 'SELECT id, title, performer FROM songs WHERE LOWER(performer) LIKE $1',
+        values: [`%${performer.toLowerCase()}%`],
+      };
+    }
+
+    const result = await this.#pool.query(query);
+    if (!result.rows.length) {
+      throw new NotFoundError('Songs not found');
+    }
+
+    return result.rows;
+  }
+
   async getSongs() {
-    const result = await this.#pool.query('SELECT * FROM songs');
+    const result = await this.#pool.query('SELECT id, title, performer FROM songs');
     return result.rows;
   }
 
@@ -90,24 +144,31 @@ class OpenMusicService {
       text: 'SELECT * FROM songs WHERE id = $1',
       values: [id],
     };
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Song not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Song not found');
     }
 
-    return result.rows[0];
+    return result.rows.map(mapDBToModel)[0];
   }
 
   async editSongById(id, {
     title, year, genre, performer, duration, albumId,
   }) {
-    const query = {
-      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, albumId = $6 WHERE id = $7 RETURNING id',
+    const query = albumId === undefined ? {
+      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5 WHERE id = $6 RETURNING id',
+      values: [title, year, genre, performer, duration, id],
+    } : {
+      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6 WHERE id = $7 RETURNING id',
       values: [title, year, genre, performer, duration, albumId, id],
     };
 
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Song failed to update, id not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Song failed to update, id not found');
@@ -119,10 +180,14 @@ class OpenMusicService {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch(() => {
+      throw new NotFoundError('Song failed to delete, id not found');
+    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Song failed to delete, id not found');
     }
   }
 }
+
+module.exports = OpenMusicService;

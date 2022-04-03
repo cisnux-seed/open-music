@@ -3,13 +3,13 @@
 const { PgLiteral } = require('node-pg-migrate');
 
 exports.up = (pgm) => {
+  pgm.createExtension('uuid-ossp', { ifNotExists: true });
   pgm.createTable(
     'albums',
     {
       id: {
-        type: 'uuid',
+        type: 'UUID',
         default: new PgLiteral('uuid_generate_v4()'),
-        notNull: true,
         primaryKey: true,
       },
       name: {

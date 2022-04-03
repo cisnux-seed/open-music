@@ -1,6 +1,6 @@
 const ClientError = require('../../exceptions/ClientError');
 
-class AlbumHandler {
+class AlbumsHandler {
   // private service
   #service;
 
@@ -46,7 +46,6 @@ class AlbumHandler {
         message: 'Sorry, our server returned an error.',
       });
       response.code(500);
-      console.error(error);
       return response;
     }
   }
@@ -58,7 +57,7 @@ class AlbumHandler {
       return {
         status: 'success',
         data: {
-          album,
+          ...album,
         },
       };
     } catch (error) {
@@ -76,7 +75,6 @@ class AlbumHandler {
         message: 'Sorry, our server returned an error.',
       });
       response.code(500);
-      console.error(error);
       return response;
     }
   }
@@ -107,7 +105,6 @@ class AlbumHandler {
         message: 'Sorry, our server returned an error.',
       });
       response.code(500);
-      console.error(error);
       return response;
     }
   }
@@ -135,10 +132,9 @@ class AlbumHandler {
         message: 'Sorry, our server returned an error.',
       });
       response.code(500);
-      console.error(error);
       return response;
     }
   }
 }
 
-module.exports = AlbumHandler;
+module.exports = AlbumsHandler;

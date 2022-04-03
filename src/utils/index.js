@@ -1,0 +1,16 @@
+// disable camelcase to mapping songs table to song model
+/* eslint-disable camelcase */
+
+const mapDBToModel = ({
+  id, title, year, genre, performer, duration, album_id,
+}) => ({
+  id,
+  title,
+  year,
+  genre,
+  performer,
+  duration,
+  albumId: album_id,
+});
+
+module.exports = mapDBToModel;
