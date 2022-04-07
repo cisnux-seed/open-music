@@ -24,8 +24,9 @@ class OpenMusicService {
 
     await this.#pool.query('BEGIN');
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
@@ -82,8 +83,9 @@ class OpenMusicService {
 
     await this.#pool.query('BEGIN');
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
@@ -105,8 +107,9 @@ class OpenMusicService {
 
     await this.#pool.query('BEGIN');
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
@@ -134,8 +137,9 @@ class OpenMusicService {
 
     await this.#pool.query('BEGIN');
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
@@ -223,8 +227,9 @@ class OpenMusicService {
 
     await this.#pool.query('BEGIN');
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
@@ -245,8 +250,9 @@ class OpenMusicService {
       values: [id],
     };
     const result = await this.#pool.query(query)
-      .then(async () => {
+      .then(async (res) => {
         await this.#pool.query('COMMIT');
+        return res;
       })
       .catch(async (err) => {
         await this.#pool.query('ROLLBACK');
