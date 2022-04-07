@@ -22,7 +22,9 @@ class OpenMusicService {
       values: [id, name, year],
     };
 
-    const result = await this.#pool.query(query).catch((err) => {
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
       console.log(err.stack);
       console.log(err.message);
       throw new ServerError('Sorry, our server returned an error.', 'error');
@@ -74,7 +76,9 @@ class OpenMusicService {
       values: [name, year, id],
     };
 
-    const result = await this.#pool.query(query).catch((err) => {
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
       console.log(err.stack);
       console.log(err.message);
       throw new ServerError('Sorry, our server returned an error.', 'error');
@@ -90,7 +94,10 @@ class OpenMusicService {
       text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch((err) => {
+
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
       console.log(err.stack);
       console.log(err.message);
       throw new ServerError('Sorry, our server returned an error.', 'error');
@@ -113,7 +120,13 @@ class OpenMusicService {
       values: [id, title, genre, year, performer, duration, albumId],
     };
 
-    const result = await this.#pool.query(query);
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
 
     if (!result.rows[0].id) {
       throw new InvariantError('Failed to add song', 'fail');
@@ -192,7 +205,9 @@ class OpenMusicService {
       values: [title, year, genre, performer, duration, albumId, id],
     };
 
-    const result = await this.#pool.query(query).catch((err) => {
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
       console.log(err.stack);
       console.log(err.message);
       throw new ServerError('Sorry, our server returned an error.', 'error');
@@ -204,11 +219,13 @@ class OpenMusicService {
   }
 
   async deleteSongById(id) {
+    await this.#pool.query('BEGIN');
     const query = {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch((err) => {
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
       console.log(err.stack);
       console.log(err.message);
       throw new ServerError('Sorry, our server returned an error.', 'error');
