@@ -23,12 +23,16 @@ class OpenMusicService {
     };
 
     await this.#pool.query('BEGIN');
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows[0].id) {
       throw new InvariantError('Failed to add albumm', 'fail');
@@ -77,12 +81,16 @@ class OpenMusicService {
     };
 
     await this.#pool.query('BEGIN');
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows.length) {
       throw new NotFoundError('Album failed to update, id not found', 'fail');
@@ -96,12 +104,16 @@ class OpenMusicService {
     };
 
     await this.#pool.query('BEGIN');
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows.length) {
       throw new NotFoundError('Album failed to delete, id not found', 'fail');
@@ -121,12 +133,16 @@ class OpenMusicService {
     };
 
     await this.#pool.query('BEGIN');
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows[0].id) {
       throw new InvariantError('Failed to add song', 'fail');
@@ -206,12 +222,16 @@ class OpenMusicService {
     };
 
     await this.#pool.query('BEGIN');
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows.length) {
       throw new NotFoundError('Song failed to update, id not found', 'fail');
@@ -224,12 +244,16 @@ class OpenMusicService {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch(async (err) => {
-      await this.#pool.query('ROLLBACK');
-      console.log(err.stack);
-      console.log(err.message);
-      throw new ServerError('Sorry, our server returned an error.', 'error');
-    });
+    const result = await this.#pool.query(query)
+      .then(async () => {
+        await this.#pool.query('COMMIT');
+      })
+      .catch(async (err) => {
+        await this.#pool.query('ROLLBACK');
+        console.log(err.stack);
+        console.log(err.message);
+        throw new ServerError('Sorry, our server returned an error.', 'error');
+      });
 
     if (!result.rows.length) {
       throw new NotFoundError('Song failed to delete, id not found', 'fail');
