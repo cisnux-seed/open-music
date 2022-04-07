@@ -1,15 +1,10 @@
 /* eslint-disable camelcase */
-const { PgLiteral } = require('node-pg-migrate');
-
 exports.up = (pgm) => {
-  // add extension to generate uuidv4
-  pgm.createExtension('uuid-ossp', { ifNotExists: true });
   pgm.createTable(
     'albums',
     {
       id: {
-        type: 'UUID',
-        default: new PgLiteral('uuid_generate_v4()'),
+        type: 'VARCHAR(50)',
         primaryKey: true,
       },
       name: {
@@ -25,8 +20,10 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
+  pgm.createIndex('albums', ['name', 'year']);
 };
 
 exports.down = (pgm) => {
+  pgm.dropIndex('albums', ['name', 'year']);
   pgm.dropTable('albums');
 };

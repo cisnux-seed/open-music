@@ -1,6 +1,10 @@
 const { Pool } = require('pg');
-const InvariantError = require('../../exceptions/InvariantError');
-const NotFoundError = require('../../exceptions/NotFoundError');
+const { nanoid } = require('nanoid');
+
+const InvariantError = require('../../exceptions/InvariantError', 'fail');
+const NotFoundError = require('../../exceptions/NotFoundError', 'fail');
+
+const ServerError = require('../../exceptions/ServerError', 'error');
 const mapDBToModel = require('../../utils');
 
 class OpenMusicService {
@@ -12,15 +16,20 @@ class OpenMusicService {
   }
 
   async addAlbum({ name, year }) {
+    const id = `album-${nanoid(16)}`;
     const query = {
-      text: 'INSERT INTO albums(name, year) VALUES($1, $2) RETURNING id',
-      values: [name, year],
+      text: 'INSERT INTO albums VALUES($1, $2, $3) RETURNING id',
+      values: [id, name, year],
     };
 
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
 
     if (!result.rows[0].id) {
-      throw new InvariantError('Failed to add albumm');
+      throw new InvariantError('Failed to add albumm', 'fail');
     }
 
     return result.rows[0].id;
@@ -30,12 +39,12 @@ class OpenMusicService {
     /*
      *Expected result:
      * album: {
-     * id: uui,
+     * id: album-nanoid,
      * name: 'album name',
      * year: year,
      * songs: [
      *   {
-     *     id: 'uuid',
+     *     id: 'song-nanoid',
      *     title: 'title song',
      *     performer: 'performer'
      *   }
@@ -46,12 +55,14 @@ class OpenMusicService {
       text: 'SELECT row_to_json(albums) AS album FROM(SELECT albums.id, albums.name, albums.year, (SELECT json_agg(songs) AS songs FROM(SELECT id, title, performer FROM songs WHERE songs.album_id = $1) songs) FROM albums) albums WHERE id=$1',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Album not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album not found');
+      throw new NotFoundError('Album not found', 'fail');
     }
 
     return result.rows[0];
@@ -63,12 +74,14 @@ class OpenMusicService {
       values: [name, year, id],
     };
 
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Album failed to update, id not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album failed to update, id not found');
+      throw new NotFoundError('Album failed to update, id not found', 'fail');
     }
   }
 
@@ -77,30 +90,33 @@ class OpenMusicService {
       text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Album failed to delete, id not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album failed to delete, id not found');
+      throw new NotFoundError('Album failed to delete, id not found', 'fail');
     }
   }
 
   async addSong({
     title, year, genre, performer, duration, albumId,
   }) {
+    const id = `songs-${nanoid(16)}`;
     const query = albumId === undefined ? {
-      text: 'INSERT INTO songs(title, genre, year, performer, duration) VALUES($1, $2, $3, $4, $5) RETURNING id',
-      values: [title, genre, year, performer, duration],
+      text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
+      values: [id, title, genre, year, performer, duration],
     } : {
-      text: 'INSERT INTO songs(title, genre, year, performer, duration, album_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
-      values: [title, genre, year, performer, duration, albumId],
+      text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      values: [id, title, genre, year, performer, duration, albumId],
     };
 
     const result = await this.#pool.query(query);
 
     if (!result.rows[0].id) {
-      throw new InvariantError('Failed to add song');
+      throw new InvariantError('Failed to add song', 'fail');
     }
 
     return result.rows[0].id;
@@ -126,16 +142,24 @@ class OpenMusicService {
       };
     }
 
-    const result = await this.#pool.query(query);
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
     if (!result.rows.length) {
-      throw new NotFoundError('Songs not found');
+      throw new NotFoundError('Songs not found', 'fail');
     }
 
     return result.rows;
   }
 
   async getSongs() {
-    const result = await this.#pool.query('SELECT id, title, performer FROM songs');
+    const result = await this.#pool.query('SELECT id, title, performer FROM songs').catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
     return result.rows;
   }
 
@@ -144,12 +168,14 @@ class OpenMusicService {
       text: 'SELECT * FROM songs WHERE id = $1',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Song not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Song not found');
+      throw new NotFoundError('Song not found', 'fail');
     }
 
     return result.rows.map(mapDBToModel)[0];
@@ -166,12 +192,14 @@ class OpenMusicService {
       values: [title, year, genre, performer, duration, albumId, id],
     };
 
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Song failed to update, id not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Song failed to update, id not found');
+      throw new NotFoundError('Song failed to update, id not found', 'fail');
     }
   }
 
@@ -180,12 +208,14 @@ class OpenMusicService {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const result = await this.#pool.query(query).catch(() => {
-      throw new NotFoundError('Song failed to delete, id not found');
+    const result = await this.#pool.query(query).catch((err) => {
+      console.log(err.stack);
+      console.log(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 
     if (!result.rows.length) {
-      throw new NotFoundError('Song failed to delete, id not found');
+      throw new NotFoundError('Song failed to delete, id not found', 'fail');
     }
   }
 }

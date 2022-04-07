@@ -1,28 +1,23 @@
 /* eslint-disable camelcase */
 
-const { PgLiteral } = require('node-pg-migrate');
-
 exports.up = (pgm) => {
-  // add extension to generate uuidv4
-  pgm.createExtension('uuid-ossp', { ifNotExists: true });
   pgm.createTable(
     'songs',
     {
       id: {
-        type: 'UUID',
+        type: 'VARCHAR(50)',
         primaryKey: true,
-        default: new PgLiteral('uuid_generate_v4()'),
       },
       title: {
         type: 'TEXT',
         notNull: true,
       },
-      year: {
-        type: 'INTEGER',
-        notNull: true,
-      },
       genre: {
         type: 'TEXT',
+        notNull: true,
+      },
+      year: {
+        type: 'INTEGER',
         notNull: true,
       },
       performer: {
@@ -34,7 +29,7 @@ exports.up = (pgm) => {
         notNull: false,
       },
       album_id: {
-        type: 'UUID',
+        type: 'VARCHAR(50)',
         notNull: false,
         references: 'albums',
       },
@@ -43,8 +38,10 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
+  pgm.createIndex('songs', ['title', 'genre', 'year', 'performer']);
 };
 
 exports.down = (pgm) => {
+  pgm.dropIndex('songs', ['title', 'genre', 'year', 'performer']);
   pgm.dropTable('songs');
 };

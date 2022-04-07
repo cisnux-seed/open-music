@@ -6,6 +6,8 @@ const albums = require('./api/albums');
 const OpenMusicService = require('./services/postgres/OpenMusicService');
 const AlbumsValidator = require('./validator/albums');
 const SongsValidator = require('./validator/songs');
+const ClientError = require('./exceptions/ClientError');
+const ServerError = require('./exceptions/ServerError');
 
 const init = async () => {
   const openMusicService = new OpenMusicService();
@@ -35,8 +37,22 @@ const init = async () => {
   },
   ]);
 
+  server.ext('onPreResponse', (request, h) => {
+    const { response } = request;
+
+    if (response instanceof ClientError || response instanceof ServerError) {
+      const newResponse = h.response({
+        status: response.status,
+        message: response.message,
+      });
+      newResponse.code(response.statusCode);
+      return newResponse;
+    }
+
+    return response.continue || response;
+  });
   await server.start();
-  console.log(`Server already running on ${server.info.uri}`);
+  console.info(`Server already running on ${server.info.uri}`);
 };
 
 init();
