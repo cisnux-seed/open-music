@@ -55,7 +55,7 @@ class AlbumsService {
 * }
 */
     const query = {
-      text: `SELECT row_to_json(albums) AS album 
+      text: `SELECT row_to_json(albums) AS album
       FROM(SELECT albums.id, albums.name, albums.year,
       (SELECT json_agg(songs) AS songs FROM(SELECT id, title, performer FROM songs WHERE songs.album_id = $1)
       songs) FROM albums) albums WHERE id=$1`,

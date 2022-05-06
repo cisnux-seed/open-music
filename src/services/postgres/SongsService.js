@@ -34,6 +34,9 @@ class SongsService {
       await this.#pool.query('ROLLBACK');
       console.error(err.stack);
       console.error(err.message);
+      if (err.message.includes('violates foreign key')) {
+        throw new NotFoundError('Failed to add song, album id not found', 'fail');
+      }
       throw new ServerError('Sorry, our server returned an error.', 'error');
     });
 

@@ -10,14 +10,10 @@ exports.up = (pgm) => {
       },
       playlist_id: {
         type: 'VARCHAR(50)',
-        unique: true,
-        notNull: true,
         references: 'playlists',
       },
       song_id: {
         type: 'VARCHAR(50)',
-        unique: true,
-        notNull: true,
         references: 'songs',
       },
     },
@@ -25,10 +21,12 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
+  pgm.addConstraint('playlist_songs', 'unique_playlist_id_and_song_id', 'UNIQUE(playlist_id, song_id)');
   pgm.createIndex('playlist_songs', ['id', 'playlist_id', 'song_id']);
 };
 
 exports.down = (pgm) => {
+  pgm.dropConstraint('playlist_songs', 'unique_playlist_id_and_song_id');
   pgm.dropIndex('playlist_songs', ['id', 'playlist_id', 'song_id']);
   pgm.dropTable('playlist_songs');
 };

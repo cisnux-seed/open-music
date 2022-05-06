@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+
 exports.up = (pgm) => {
   pgm.createTable(
     'albums',
@@ -20,10 +21,10 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
-  pgm.createIndex('albums', ['name', 'year']);
+  pgm.createIndex('albums', ['id', 'name', 'year']);
 };
 
 exports.down = (pgm) => {
-  pgm.dropIndex('albums', ['name', 'year']);
+  pgm.dropIndex('albums', ['id', 'name', 'year']);
   pgm.dropTable('albums');
 };

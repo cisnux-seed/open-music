@@ -1,7 +1,5 @@
 /* eslint-disable camelcase */
 
-exports.shorthands = undefined;
-
 exports.up = (pgm) => {
   pgm.createTable(
     'collaborations',
@@ -25,10 +23,12 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
+  pgm.addConstraint('collaborations', 'unique_playlist_id_and_user_id', 'UNIQUE(playlist_id, user_id)');
   pgm.createIndex('collaborations', ['id', 'playlist_id', 'user_id']);
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('collaborations');
+  pgm.dropConstraint('collaborations', 'unique_playlist_id_and_user_id');
   pgm.dropIndex('collaborations', ['id', 'playlist_id', 'user_id']);
+  pgm.dropTable('collaborations');
 };

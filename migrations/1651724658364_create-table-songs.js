@@ -38,10 +38,10 @@ exports.up = (pgm) => {
       ifNotExists: true,
     },
   );
-  pgm.createIndex('songs', ['title', 'genre', 'year', 'performer']);
+  pgm.createIndex('songs', ['id', 'title', 'genre', 'year', 'performer']);
 };
 
 exports.down = (pgm) => {
-  pgm.dropIndex('songs', ['title', 'genre', 'year', 'performer']);
+  pgm.dropIndex('songs', ['id', 'title', 'genre', 'year', 'performer']);
   pgm.dropTable('songs');
 };
