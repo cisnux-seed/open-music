@@ -22,6 +22,7 @@ const UsersValidator = require('./validator/users');
 const playlists = require('./api/playlists');
 const PlaylistsService = require('./services/postgres/PlaylistsService');
 const PlaylistsValidator = require('./validator/playlists');
+const Actions = require('./utils/action_activities');
 
 // authentications
 const authentications = require('./api/authentications');
@@ -98,6 +99,7 @@ const init = async () => {
       options: {
         service: playlistsService,
         validator: PlaylistsValidator,
+        actions: Actions,
       },
     },
     {

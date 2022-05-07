@@ -34,6 +34,37 @@ class PlaylistsService {
     }
   }
 
+  async addPlaylistActivity({
+    playlistId, songId, userId, action,
+  }) {
+    const id = `playlist_song_activities-${nanoid(16)}`;
+    const time = new Date().toISOString();
+
+    const query = {
+      text: 'INSERT INTO playlist_song_activities VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
+      values: [id, playlistId, songId, userId, action, time],
+    };
+
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
+      console.error(err.stack);
+      console.error(err.message);
+      if (err.message.includes('violates foreign key')) {
+        throw new NotFoundError('Playlist not found', 'fail');
+      }
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    if (!result.rows[0].id) {
+      await this.#pool.query('ROLLBACK');
+      throw new InvariantError('Playlist not found', 'fail');
+    }
+    await this.#pool.query('COMMIT');
+
+    return result.rows[0].id;
+  }
+
   async addPlaylist({ name, owner }) {
     const id = `playlists-${nanoid(16)}`;
     const query = {
@@ -78,7 +109,7 @@ class PlaylistsService {
 
     if (!result.rows[0].id) {
       await this.#pool.query('ROLLBACK');
-      throw new InvariantError('Failed to add song, id not found', 'fail');
+      throw new NotFoundError('Failed to add song, id not found', 'fail');
     }
     await this.#pool.query('COMMIT');
 
@@ -100,6 +131,28 @@ class PlaylistsService {
         console.error(err.message);
         throw new ServerError('Sorry, our server returned an error.', 'error');
       });
+    return result.rows;
+  }
+
+  async getPlaylistActivitiesById(playlistId) {
+    const query = {
+      text: `SELECT users.username, songs.title, playlist_song_activities.action, playlist_song_activities.time FROM playlist_song_activities
+      INNER JOIN users ON playlist_song_activities.user_id = users.id
+      INNER JOIN songs ON playlist_song_activities.song_id = songs.id
+      WHERE playlist_song_activities.playlist_id = $1`,
+      values: [playlistId],
+    };
+
+    const result = await this.#pool.query(query).catch((err) => {
+      console.error(err.stack);
+      console.error(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Playlist not found', 'fail');
+    }
+
     return result.rows;
   }
 
@@ -127,16 +180,42 @@ class PlaylistsService {
     return result.rows[0];
   }
 
-  async deletePlaylistById({ id, owner }) {
+  async isPlaylistHasSongs(id) {
+    const query = {
+      text: 'SELECT * FROM playlist_songs WHERE playlist_id = $1',
+      values: [id],
+    };
+
+    const result = await this.#pool.query(query).catch((err) => {
+      console.error(err.stack);
+      console.error(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    return result.rows.length;
+  }
+
+  async isPlaylistHasActivities(id) {
+    const query = {
+      text: 'SELECT * FROM playlist_song_activities WHERE playlist_id = $1',
+      values: [id],
+    };
+
+    const result = await this.#pool.query(query).catch((err) => {
+      console.error(err.stack);
+      console.error(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    return result.rows.length;
+  }
+
+  async deletePlaylistById(id) {
     await this.#pool.query('BEGIN');
     const query = {
       text: 'DELETE FROM playlists WHERE id = $1 RETURNING id',
       values: [id],
     };
-    const playlistResult = await this.getPlaylistById({ id, owner });
-    if (playlistResult.playlist.songs !== null) {
-      await this.deleteSongFromPlaylistById({ playlistId: id });
-    }
     const result = await this.#pool.query(query).catch(async (err) => {
       await this.#pool.query('ROLLBACK');
       console.error(err.stack);
@@ -153,13 +232,17 @@ class PlaylistsService {
 
   async deleteSongFromPlaylistById({ playlistId, songId }) {
     await this.#pool.query('BEGIN');
-    const query = songId === undefined ? {
-      text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 RETURNING id',
-      values: [playlistId],
-    } : {
-      text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id',
-      values: [playlistId, songId],
-    };
+    const query = songId === undefined
+    // delete all songs
+      ? {
+        text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 RETURNING id',
+        values: [playlistId],
+      }
+    // delete only selected song
+      : {
+        text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id',
+        values: [playlistId, songId],
+      };
     const result = await this.#pool.query(query).catch(async (err) => {
       await this.#pool.query('ROLLBACK');
       console.error(err.stack);
@@ -170,6 +253,27 @@ class PlaylistsService {
     if (!result.rows.length) {
       await this.#pool.query('ROLLBACK');
       throw new NotFoundError('Songs of Playlist failed to delete, id not found', 'fail');
+    }
+    await this.#pool.query('COMMIT');
+  }
+
+  async deletePlaylistActivityById(playlistId) {
+    await this.#pool.query('BEGIN');
+    const query = {
+      text: 'DELETE FROM playlist_song_activities WHERE playlist_id = $1 RETURNING id',
+      values: [playlistId],
+    };
+
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
+      console.error(err.stack);
+      console.error(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    if (!result.rows.length) {
+      await this.#pool.query('ROLLBACK');
+      throw new NotFoundError('Playlist not found', 'fail');
     }
     await this.#pool.query('COMMIT');
   }

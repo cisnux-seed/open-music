@@ -5,9 +5,12 @@ class PlaylistHandler {
   // private validator
   #validator;
 
-  constructor(service, validator) {
+  #actions;
+
+  constructor(service, validator, actions) {
     this.#service = service;
     this.#validator = validator;
+    this.#actions = actions;
 
     this.postPlaylistHandler = this.postPlaylistHandler.bind(this);
     this.postSongToPlaylistByIdHandler = this.postSongToPlaylistByIdHandler.bind(this);
@@ -15,6 +18,7 @@ class PlaylistHandler {
     this.getPlaylistByIdHandler = this.getPlaylistByIdHandler.bind(this);
     this.deletePlaylistByIdHandler = this.deletePlaylistByIdHandler.bind(this);
     this.deleteSongFromPlaylistByIdHandler = this.deleteSongFromPlaylistByIdHandler.bind(this);
+    this.getPlaylistActivitiesByIdHandler = this.getPlaylistActivitiesByIdHandler.bind(this);
   }
 
   async postPlaylistHandler(request, h) {
@@ -43,6 +47,11 @@ class PlaylistHandler {
 
     await this.#service.verifyPlaylistOwner({ id: playlistId, owner: credentialId });
     const playlistSongId = await this.#service.addSongToPlaylist({ playlistId, songId });
+    const action = this.#actions.add;
+    await this.#service.addPlaylistActivity({
+      playlistId, songId, userId: credentialId, action,
+    });
+
     const response = h.response({
       status: 'success',
       message: 'Song successfully added to playlist',
@@ -65,6 +74,20 @@ class PlaylistHandler {
     };
   }
 
+  async getPlaylistActivitiesByIdHandler(request) {
+    const { id: playlistId } = await request.params;
+    const { id: credentialId } = request.auth.credentials;
+    await this.#service.verifyPlaylistOwner({ id: playlistId, owner: credentialId });
+    const activities = await this.#service.getPlaylistActivitiesById(playlistId);
+    return {
+      status: 'success',
+      data: {
+        playlistId,
+        activities,
+      },
+    };
+  }
+
   async getPlaylistByIdHandler(request) {
     const { id: playlistId } = request.params;
     const { id: credentialId } = request.auth.credentials;
@@ -83,10 +106,22 @@ class PlaylistHandler {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
     await this.#service.verifyPlaylistOwner({ id, owner: credentialId });
-    await this.#service.deletePlaylistById({ id, owner: credentialId });
+    // check if the playlist has songs?
+    const isPlaylistHasSongs = await this.#service.isPlaylistHasSongs(id);
+    const isPlaylistHasActivities = await this.#service.isPlaylistHasActivities(id);
+    // delete all songs in the playlist, if the playlist has songs
+    if (isPlaylistHasSongs) {
+      await this.#service.deleteSongFromPlaylistById({ playlistId: id });
+    }
+
+    if (isPlaylistHasActivities) {
+      await this.#service.deletePlaylistActivityById(id);
+    }
+    await this.#service.deletePlaylistById(id);
+
     return {
       status: 'success',
-      message: 'Song successfully deleted',
+      message: 'Playlist successfully deleted',
     };
   }
 
@@ -99,6 +134,11 @@ class PlaylistHandler {
 
     await this.#service.verifyPlaylistOwner({ id: playlistId, owner: credentialId });
     await this.#service.deleteSongFromPlaylistById({ playlistId, songId });
+    const action = this.#actions.delete;
+    await this.#service.addPlaylistActivity({
+      playlistId, songId, userId: credentialId, action,
+    });
+
     return {
       status: 'success',
       message: 'Song successfully deleted from playlist',
