@@ -11,11 +11,14 @@ class PlaylistsService {
   // private pool property
   #pool;
 
-  constructor() {
+  #collaborationsService;
+
+  constructor(collaborationsService) {
     this.#pool = new Pool();
+    this.#collaborationsService = collaborationsService;
   }
 
-  async verifyPlaylistOwner({ id, owner }) {
+  async verifyPlaylistOwner(id, userId) {
     const query = {
       text: 'SELECT * FROM playlists WHERE id = $1',
       values: [id],
@@ -29,8 +32,23 @@ class PlaylistsService {
 
     const playlist = result.rows[0];
 
-    if (playlist.owner !== owner) {
+    if (playlist.owner !== userId) {
       throw new AuthorizationError('You have no right to access this resource', 'fail');
+    }
+  }
+
+  async verifyPlaylistAccess(playlistId, userId) {
+    try {
+      await this.verifyPlaylistOwner(playlistId, userId);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      try {
+        await this.#collaborationsService.verifyCollaborator(playlistId, userId);
+      } catch {
+        throw error;
+      }
     }
   }
 
@@ -120,8 +138,8 @@ class PlaylistsService {
     const query = {
       text: `SELECT playlists.id, playlists.name, users.username FROM playlists
       INNER JOIN users ON playlists.owner = users.id
-      LEFT JOIN collaborations ON playlists.owner = collaborations.user_id
-      WHERE playlists.owner = $1 OR collaborations.id = $1`,
+      LEFT JOIN collaborations ON playlists.id = collaborations.playlist_id
+      WHERE playlists.owner = $1 OR collaborations.user_id = $1`,
       values: [owner],
     };
     const result = await this.#pool
@@ -156,15 +174,15 @@ class PlaylistsService {
     return result.rows;
   }
 
-  async getPlaylistById({ id, owner }) {
+  async getPlaylistById(id) {
     const query = {
       text: `SELECT row_to_json(playlists) AS playlist 
       FROM(SELECT playlists.id, playlists.name, users.username, (SELECT json_agg(playlist_songs) AS songs
       FROM(SELECT songs.id, songs.title, songs.performer
       FROM playlist_songs INNER JOIN songs ON playlist_songs.song_id = songs.id
       WHERE playlist_songs.playlist_id = $1) playlist_songs)
-      FROM playlists INNER JOIN users ON playlists.owner = users.id WHERE users.id = $2) playlists WHERE id=$1`,
-      values: [id, owner],
+      FROM playlists INNER JOIN users ON playlists.owner = users.id) playlists WHERE id=$1`,
+      values: [id],
     };
 
     const result = await this.#pool.query(query).catch((err) => {
