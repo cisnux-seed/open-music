@@ -1,8 +1,6 @@
 class AlbumsHandler {
-  // private service
   #service;
 
-  // private validator
   #validator;
 
   constructor(service, validator) {
@@ -36,7 +34,7 @@ class AlbumsHandler {
     return {
       status: 'success',
       data: {
-        ...album,
+        album,
       },
     };
   }

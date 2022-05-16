@@ -1,8 +1,6 @@
 class SongsHandler {
-  // private service
   #service;
 
-  // private validator
   #validator;
 
   constructor(service, validator) {

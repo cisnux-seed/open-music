@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const mapDBToModel = require('../../utils');
 
 const InvariantError = require('../../exceptions/InvariantError', 'fail');
 const NotFoundError = require('../../exceptions/NotFoundError', 'fail');
@@ -7,7 +8,6 @@ const NotFoundError = require('../../exceptions/NotFoundError', 'fail');
 const ServerError = require('../../exceptions/ServerError', 'error');
 
 class AlbumsService {
-  // private pool property
   #pool;
 
   constructor() {
@@ -39,24 +39,9 @@ class AlbumsService {
   }
 
   async getAlbumById(id) {
-    /*
-*Expected result:
-* album: {
-* id: album-nanoid,
-* name: 'album name',
-* year: year,
-* songs: [
-*   {
-*     id: 'song-nanoid',
-*     title: 'title song',
-*     performer: 'performer'
-*   }
-* ]
-* }
-*/
     const query = {
       text: `SELECT row_to_json(albums) AS album
-      FROM(SELECT albums.id, albums.name, albums.year,
+      FROM(SELECT albums.id, albums.name, albums.year, albums.cover_url,
       (SELECT json_agg(songs) AS songs FROM(SELECT id, title, performer FROM songs WHERE songs.album_id = $1)
       songs) FROM albums) albums WHERE id=$1`,
       values: [id],
@@ -71,13 +56,34 @@ class AlbumsService {
       throw new NotFoundError('Album not found', 'fail');
     }
 
-    return result.rows[0];
+    return result.rows.map(mapDBToModel.albumTableToObject)[0];
   }
 
   async editAlbumById(id, { name, year }) {
     const query = {
       text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
       values: [name, year, id],
+    };
+
+    await this.#pool.query('BEGIN');
+    const result = await this.#pool.query(query).catch(async (err) => {
+      await this.#pool.query('ROLLBACK');
+      console.error(err.stack);
+      console.error(err.message);
+      throw new ServerError('Sorry, our server returned an error.', 'error');
+    });
+
+    if (!result.rows.length) {
+      await this.#pool.query('ROLLBACK');
+      throw new NotFoundError('Album failed to update, id not found', 'fail');
+    }
+    await this.#pool.query('COMMIT');
+  }
+
+  async addCoverByAlbumById(id, { coverUrl }) {
+    const query = {
+      text: 'UPDATE albums SET cover_url = $1 WHERE id = $2 RETURNING id',
+      values: [coverUrl, id],
     };
 
     await this.#pool.query('BEGIN');

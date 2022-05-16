@@ -8,7 +8,6 @@ const ServerError = require('../../exceptions/ServerError', 'error');
 const mapDBToModel = require('../../utils');
 
 class SongsService {
-  // private pool property
   #pool;
 
   constructor() {
@@ -107,7 +106,7 @@ class SongsService {
       throw new NotFoundError('Song not found', 'fail');
     }
 
-    return result.rows.map(mapDBToModel)[0];
+    return result.rows.map(mapDBToModel.songTableToObject)[0];
   }
 
   async editSongById(id, {

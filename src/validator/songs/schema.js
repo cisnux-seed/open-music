@@ -11,7 +11,6 @@ const SongPayloadSchema = Joi.object({
   albumId: Joi.string(),
 });
 
-// song query schema
 const SongQuerySchema = Joi.object({
   title: Joi.string(),
   performer: Joi.string(),

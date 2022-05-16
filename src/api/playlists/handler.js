@@ -1,8 +1,6 @@
 class PlaylistHandler {
-  // private service
   #service;
 
-  // private validator
   #validator;
 
   #actions;
@@ -107,10 +105,9 @@ class PlaylistHandler {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
     await this.#service.verifyPlaylistOwner(id, credentialId);
-    // check if the playlist has songs?
     const isPlaylistHasSongs = await this.#service.isPlaylistHasSongs(id);
     const isPlaylistHasActivities = await this.#service.isPlaylistHasActivities(id);
-    // delete all songs in the playlist, if the playlist has songs
+
     if (isPlaylistHasSongs) {
       await this.#service.deleteSongFromPlaylistById({ playlistId: id });
     }

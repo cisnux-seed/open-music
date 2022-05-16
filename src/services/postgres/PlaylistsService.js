@@ -8,7 +8,6 @@ const ServerError = require('../../exceptions/ServerError', 'error');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class PlaylistsService {
-  // private pool property
   #pool;
 
   #collaborationsService;
@@ -251,12 +250,10 @@ class PlaylistsService {
   async deleteSongFromPlaylistById({ playlistId, songId }) {
     await this.#pool.query('BEGIN');
     const query = songId === undefined
-    // delete all songs
       ? {
         text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 RETURNING id',
         values: [playlistId],
       }
-    // delete only selected song
       : {
         text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id',
         values: [playlistId, songId],
